@@ -172,6 +172,10 @@ public class GameController : ControllerBase<GameViewModel>
                 if(endIndex == -1)
                     continue;
 
+                // 今の位置より下には行かない
+                if(endIndex >= c)
+                    endIndex = c;
+
                 var endPos = this._BlockPoss[i, endIndex].transform.position;
                 if(block.Move(endPos))
                 {
@@ -179,19 +183,12 @@ public class GameController : ControllerBase<GameViewModel>
                     this._LaneData[i, c] = null;
                     this._LaneData[i, endIndex] = block;
 
-                    // 上のブロックと比較
-                    if(endIndex != 0)
-                    {
-                        var upBlock = this._LaneData[i, endIndex - 1];
-                        if(upBlock.Number == block.Number)
-                        {
-                            Debug.Log("同じ数値");
-                            block.Merge(1);
+                    // マージチェック
+                    int mergeNum = this._CheckMerge(i, endIndex);
 
-                            this._LaneData[i, endIndex - 1] = null;
-                            GameObject.Destroy(upBlock.gameObject);
-                        }
-                    }
+                    // 同じ数値の分だけマージ
+                    if(mergeNum >= 1)
+                        block.Merge(mergeNum);
                 }
                 else
                 {
@@ -232,6 +229,50 @@ public class GameController : ControllerBase<GameViewModel>
             Debug.LogWarning("配置できる場所が無い");
 
         return index;
+    }
+
+    int _CheckMerge(int laneIndex, int blockIndex)
+    {
+        int mergeNum = 0;
+        var block = this._LaneData[laneIndex, blockIndex];
+
+        // 上のブロックと比較
+        if(blockIndex != 0)
+        {
+            var upBlock = this._LaneData[laneIndex, blockIndex - 1];
+            if(upBlock != null && upBlock.Number == block.Number)
+            {
+                mergeNum++;
+                this._LaneData[laneIndex, blockIndex - 1] = null;
+                GameObject.Destroy(upBlock.gameObject);
+            }
+        }
+
+        // 右のブロックと比較
+        if(laneIndex != LANE_NUM - 1)
+        {
+            var rightBlock = this._LaneData[laneIndex + 1, blockIndex];
+            if(rightBlock != null && rightBlock.Number == block.Number)
+            {
+                mergeNum++;
+                this._LaneData[laneIndex + 1, blockIndex] = null;
+                GameObject.Destroy(rightBlock.gameObject);
+            }
+        }
+
+        // 左のブロックと比較
+        if(laneIndex != 0)
+        {
+            var leftBlock = this._LaneData[laneIndex -1, blockIndex];
+            if(leftBlock != null && leftBlock.Number == block.Number)
+            {
+                mergeNum++;
+                this._LaneData[laneIndex - 1, blockIndex] = null;
+                GameObject.Destroy(leftBlock.gameObject);
+            }
+        }
+
+        return mergeNum;
     }
 
     void _ShowLaneData()

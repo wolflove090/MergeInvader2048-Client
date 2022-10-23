@@ -5,7 +5,7 @@ using TMPro;
 
 public class Block : MonoBehaviour
 {
-    const float SPD = 15f;
+    const float SPD = 20f;
 
     [SerializeField]
     TextMeshProUGUI _Label;
