@@ -1,9 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using DG.Tweening;
-using System.Threading;
-using System.Threading.Tasks;
 
 public class GameController : ControllerBase<GameViewModel>
 {
@@ -39,101 +36,45 @@ public class GameController : ControllerBase<GameViewModel>
             {null,null,null,null,null,null},
             };
 
-        // 各レーンからブロックのポジション情報を抽出
-        this._BlockPoss = this._CreateBlockPos();
-
         // 初期ブロック
         this._BlockPrefab.SetActive(false);
         this._InstantBlock();
         
-
-        // レーンタップアクション
-        this._ViewModel.Lane01.OnClick = () => 
+        // 各レーンごとの設定
+        ButtonBase[] laneButtons = new ButtonBase[LANE_NUM]
         {
-            if(this._Moving)
+            this._ViewModel.Lane01,
+            this._ViewModel.Lane02,
+            this._ViewModel.Lane03,
+            this._ViewModel.Lane04,
+            this._ViewModel.Lane05,
+        };
+        for(int i = 0; i < laneButtons.Length; i++)
+        {
+            int index = i;
+            var button = laneButtons[index];
+
+            // アクション設定
+            button.OnClick = () => 
+            {
+                if(this._Moving)
                 return;
                 
-            this._SetBlock(0);
-        };
+                this._SetBlock(index);
+            };
 
-        this._ViewModel.Lane02.OnClick = () => 
-        {
-            if(this._Moving)
-                return;
-
-            this._SetBlock(1);
-        };
-
-        this._ViewModel.Lane03.OnClick = () => 
-        {
-            if(this._Moving)
-                return;
-                
-            this._SetBlock(2);
-
-        };
-
-        this._ViewModel.Lane04.OnClick = () => 
-        {
-            if(this._Moving)
-                return;
-                
-            this._SetBlock(3);
-        };
-
-        this._ViewModel.Lane05.OnClick = () => 
-        {
-            if(this._Moving)
-                return;
-
-            this._SetBlock(4);
-        };
+            // 配下のブロックポジションを取得
+            var blockPosParent = button.transform.Find("Blocks");
+            for(int c = 0; c < BLOCK_NUM; c++)
+            {
+                this._BlockPoss[i,c] = blockPosParent.GetChild(c);
+            }
+        }
     }
 
     protected override void _OnUpdate()
     {
         this._Move();
-    }
-
-    // --------------------
-    // ブロックPos情報生成
-    // --------------------
-    Transform[,] _CreateBlockPos()
-    {
-        Transform blockPosParent;
-        Transform[,] blockPoss = new Transform[LANE_NUM, BLOCK_NUM];
-
-        blockPosParent = this._ViewModel.Lane01.transform.Find("Blocks");
-        for(int i = 0; i < BLOCK_NUM; i++)
-        {
-            blockPoss[0,i] = blockPosParent.GetChild(i);
-        }
-
-        blockPosParent = this._ViewModel.Lane02.transform.Find("Blocks");
-        for(int i = 0; i < BLOCK_NUM; i++)
-        {
-            blockPoss[1,i] = blockPosParent.GetChild(i);
-        }
-
-        blockPosParent = this._ViewModel.Lane03.transform.Find("Blocks");
-        for(int i = 0; i < BLOCK_NUM; i++)
-        {
-            blockPoss[2,i] = blockPosParent.GetChild(i);
-        }
-
-        blockPosParent = this._ViewModel.Lane04.transform.Find("Blocks");
-        for(int i = 0; i < BLOCK_NUM; i++)
-        {
-            blockPoss[3,i] = blockPosParent.GetChild(i);
-        }
-
-        blockPosParent = this._ViewModel.Lane05.transform.Find("Blocks");
-        for(int i = 0; i < BLOCK_NUM; i++)
-        {
-            blockPoss[4,i] = blockPosParent.GetChild(i);
-        }
-
-        return blockPoss;
     }
 
     // --------------------
@@ -231,6 +172,10 @@ public class GameController : ControllerBase<GameViewModel>
         return index;
     }
 
+    // --------------------
+    // 結合可能かをチェックと対象オブジェクトの破棄
+    // 結合可能数を返す
+    // --------------------
     int _CheckMerge(int laneIndex, int blockIndex)
     {
         int mergeNum = 0;
