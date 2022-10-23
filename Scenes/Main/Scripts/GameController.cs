@@ -53,15 +53,15 @@ public class GameController : ControllerBase<GameViewModel>
             if(this._Moving)
                 return;
                 
-            this._MoveBlock(0);
+            this._SetBlock(0);
         };
 
         this._ViewModel.Lane02.OnClick = () => 
         {
             if(this._Moving)
                 return;
-                
-            this._MoveBlock(1);
+
+            this._SetBlock(1);
         };
 
         this._ViewModel.Lane03.OnClick = () => 
@@ -69,7 +69,8 @@ public class GameController : ControllerBase<GameViewModel>
             if(this._Moving)
                 return;
                 
-            this._MoveBlock(2);
+            this._SetBlock(2);
+
         };
 
         this._ViewModel.Lane04.OnClick = () => 
@@ -77,21 +78,21 @@ public class GameController : ControllerBase<GameViewModel>
             if(this._Moving)
                 return;
                 
-            this._MoveBlock(3);
+            this._SetBlock(3);
         };
 
         this._ViewModel.Lane05.OnClick = () => 
         {
             if(this._Moving)
                 return;
-                
-            this._MoveBlock(4);
+
+            this._SetBlock(4);
         };
     }
 
     protected override void _OnUpdate()
     {
-
+        this._Move();
     }
 
     // --------------------
@@ -136,53 +137,121 @@ public class GameController : ControllerBase<GameViewModel>
     }
 
     // --------------------
-    // ブロックを動かす
+    // ブロック配置
     // --------------------
-    async Task _MoveBlock(int laneIndex)
+    void _SetBlock(int laneIndex)
     {
-        Debug.Log("Move開始");
-
-        int index = -1;
-        for(int i = 0; i < BLOCK_NUM; i++)
-        {
-            if(this._LaneData[laneIndex,i] == null)
-             {
-                index = i;
-                break;
-             }   
-        }
-
-        // レーンが埋まっていた場合
-        if(index == -1)
-            return;
-
-        this._Moving = true;
-
-        var endPos = this._BlockPoss[laneIndex, index].position;
-        var startPos = this._Block.transform.position;
-        startPos.x = endPos.x;
-        this._Block.transform.position = startPos;
-        await this._Block.transform.DOMoveY(endPos.y, 0.5f).AsyncWaitForCompletion();
-
-        this._EndMoveBlock(laneIndex, index);
-        this._Moving = false;
-        Debug.Log("Move終了");
-    }
-
-    // --------------------
-    // ブロック動作後の処理
-    // --------------------
-    void _EndMoveBlock(int laneIndex, int index)
-    {
-        this._LaneData[laneIndex,index] = this._Block;
+        // 対象レーンの一番最後に配置
+        var pos = this._BlockPoss[laneIndex, BLOCK_NUM - 1];
+        this._Block.transform.position = pos.transform.position;
+        this._LaneData[laneIndex,BLOCK_NUM - 1] = this._Block;
+        
+        // 次のブロックを作成
         this._InstantBlock();
     }
 
+    // --------------------
+    // ブロックを動かす
+    // --------------------
+    void _Move()
+    {
+        this._Moving = false;
+
+        for(int i = 0; i < LANE_NUM; i++)
+        {
+            for(int c = 0; c < BLOCK_NUM; c++)
+            {
+                var block = this._LaneData[i,c];
+                if(block == null)
+                    continue;
+
+                if(block.State == Block.BlockState.Stop)
+                    continue;
+
+                var endIndex = this._GetEndIndex(i);
+                if(endIndex == -1)
+                    continue;
+
+                var endPos = this._BlockPoss[i, endIndex].transform.position;
+                if(block.Move(endPos))
+                {
+                    // 到達したら情報更新
+                    this._LaneData[i, c] = null;
+                    this._LaneData[i, endIndex] = block;
+
+                    // 上のブロックと比較
+                    if(endIndex != 0)
+                    {
+                        var upBlock = this._LaneData[i, endIndex - 1];
+                        if(upBlock.Number == block.Number)
+                        {
+                            Debug.Log("同じ数値");
+                            block.Merge(1);
+
+                            this._LaneData[i, endIndex - 1] = null;
+                            GameObject.Destroy(upBlock.gameObject);
+                        }
+                    }
+                }
+                else
+                {
+                    this._Moving = true;
+                }
+            }
+        }
+        //this._ShowLaneData();
+    }
+
+    // --------------------
+    // ブロック生成
+    // --------------------
     void _InstantBlock()
     {
-
         var block = GameObject.Instantiate(this._ViewModel.Block2, this._BlockPrefab.transform.position, Quaternion.identity, this._Area.transform);
         block.SetActive(true);
         this._Block = block.GetComponent<Block>();
     }
+
+    // --------------------
+    // レーン上のブロック最終地点
+    // --------------------
+    int _GetEndIndex(int laneIndex)
+    {
+        // 空いている場所のインデックスを取得
+        int index = -1;
+        for(int i = 0; i < BLOCK_NUM; i++)
+        {
+            if(this._LaneData[laneIndex,i] == null)
+            {
+                index = i;
+                break;
+            }   
+        }
+
+        if(index == -1)
+            Debug.LogWarning("配置できる場所が無い");
+
+        return index;
+    }
+
+    void _ShowLaneData()
+    {
+        string message = "";
+
+        for(int i = 0; i < BLOCK_NUM; i++)
+        {
+            for(int c = 0; c < LANE_NUM; c++)
+            {
+                var block = this._LaneData[c,i];
+                int exit = block != null? 1:0;
+
+                message += $"{exit}";
+            }
+
+            message += "\n";
+        }
+
+        Debug.Log(message);
+    }
+
 }
