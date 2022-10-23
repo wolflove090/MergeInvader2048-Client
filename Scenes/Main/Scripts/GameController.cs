@@ -189,6 +189,7 @@ public class GameController : ControllerBase<GameViewModel>
             {
                 mergeNum++;
                 this._LaneData[laneIndex, blockIndex - 1] = null;
+                this._LaneMove(laneIndex);
                 GameObject.Destroy(upBlock.gameObject);
             }
         }
@@ -201,6 +202,7 @@ public class GameController : ControllerBase<GameViewModel>
             {
                 mergeNum++;
                 this._LaneData[laneIndex + 1, blockIndex] = null;
+                this._LaneMove(laneIndex + 1);
                 GameObject.Destroy(rightBlock.gameObject);
             }
         }
@@ -213,11 +215,25 @@ public class GameController : ControllerBase<GameViewModel>
             {
                 mergeNum++;
                 this._LaneData[laneIndex - 1, blockIndex] = null;
+                this._LaneMove(laneIndex - 1);
                 GameObject.Destroy(leftBlock.gameObject);
             }
         }
 
         return mergeNum;
+    }
+
+    // --------------------
+    // 対象レーンのブロックにMoveステータスを付与
+    // --------------------
+    void _LaneMove(int laneIndex)
+    {
+        for(int i = 0; i < BLOCK_NUM; i++)
+        {
+            var block = this._LaneData[laneIndex, i];
+            if(block != null)
+                block.State = Block.BlockState.Move;
+        }
     }
 
     void _ShowLaneData()
