@@ -5,4 +5,8 @@ using UnityEngine;
 public class GameViewModel : ViewModelBase
 {
     public ButtonBase Lane01;
+    public ButtonBase Lane02;
+    public ButtonBase Lane03;
+    public ButtonBase Lane04;
+    public ButtonBase Lane05;
 }
